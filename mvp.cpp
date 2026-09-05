@@ -3,23 +3,89 @@
 #include <string>
 #include <limits> 
 
+
+// MODEL
+
 struct Set {
     int weight; // его надо в double
     int reps;
 };
+// нужна ли ваще эта функция
+Set addSet(int weight, int reps) {
+    Set s;
+    s.weight = weight;
+    s.reps = reps;
+    return s;
+}
 
-struct Exercise {
-    std::string name;
-    std::vector<Set> sets;
-    std::string comment;
+class Exercise {
+public:
+    Exercise(const std::string& name, const std::string& comment = "")
+        : m_name(name), m_comment(comment) {}
+
+    void addSet(const Set& set) {
+        m_sets.push_back(set);
+    }
+    
+    const std::string& getName() const { return m_name; }
+    const std::vector<Set>& getSets() const { return m_sets; }
+    const std::string& getComm() const { return m_comment; }
+
+private:
+    std::string m_name;
+    std::vector<Set> m_sets;
+    std::string m_comment;
+
 };
 
-struct Workout {
-    std::string date;
-    std::string type;
-    std::vector<Exercise> exercises;
-    std::string comment;
+class Workout {
+public:
+    Workout(const std::string& date, const std::string& type, const std::string& comment = "") 
+        : m_date(date), m_type(type), m_comment(comment) {}
+
+    void addExersice(const Exercise& ex) {
+        m_exercises.push_back(ex);
+    }
+
+    const std::string& getDate() const { return m_date; }
+    const std::string& getType() const { return m_type; }
+    const std::vector<Exercise>& getExersices() const { return m_exercises; }
+    const std::string& getComm() const { return m_comment; }
+
+private:
+    std::string m_date;
+    std::string m_type;
+    std::vector<Exercise> m_exercises;
+    std::string m_comment;
+
 };
+
+class WorkoutManager {
+public:
+    WorkoutManager() {}
+
+    void addWorkout(const Workout& w) {
+        m_workouts.push_back(w);
+    }
+
+    bool deleteWorkout(size_t ind) { 
+        if (ind >= m_workouts.size()) {
+            return false;
+        }
+        m_workouts.erase(m_workouts.begin() + ind);
+        return true;
+    }
+
+    const std::vector<Workout>& getWorkouts() const { return m_workouts; }
+    const size_t getCount() const { return m_workouts.size(); }
+    // методы подгрузки базы данных
+
+private:
+    std::vector<Workout> m_workouts;
+
+};
+
+// VIEW
 
 void showMenu() {
     std::cout << "\n================================\n";
@@ -29,16 +95,17 @@ void showMenu() {
     std::cout << "\nВыберите опцию (введите число):\n> ";
 }
 
-void showWorkouts(std::vector<Workout>& workouts) {
-
+void showWorkouts(WorkoutManager& manager) {
+    const auto& workouts = manager.getWorkouts();
     std::cout << "\nСписок тренировок:\n";
     std::cout << "Дата         |   Тип тренировки\n"; // табуирование красивое сделать
     
     for (int i = 0; i < workouts.size(); ++i) {
-        std::cout << i + 1 << ". " << workouts[i].date << " | " << workouts[i].type << '\n';
+        std::cout << i + 1 << ". " << workouts[i].getDate() << " | " << workouts[i].getType() << '\n';
     }
 }
 
+// CONTROLLER
 
 int check(int beginV, int endV) {
     
@@ -62,66 +129,61 @@ int check(int beginV, int endV) {
     }
 }
 
+Set promptSet() {
+    std::cout << "\nВведите вес (кг) (от 0 до 100) \n> ";
+    int weight = check(0, 100);
+    std::cout << "\nВведите кол-во повторов (от 1 до 100) \n> ";
+    int reps = check(1, 100);
+    return Set({weight, reps});
+}
 
-Exercise addExersise() { // вот тут тоже вдруг не int вводятся
-    Exercise ex;
-
+Exercise promptExercise() { // вот тут тоже вдруг не int вводятся
     std::cout << "================================\n";
     std::cout << "НОВОЕ УПРАЖНЕНИЕ\n";
 
     std::string name;
     std::cout << "\nВведите название упражнения:\n> "; // выберите
-    std::getline(std::cin, ex.name);
+    std::getline(std::cin, name);
 
+    std::string comment; // как его добавить!
+    std::cout << "\nКомментарий к упражнению:\n> ";
+    std::getline(std::cin, comment);
+
+    Exercise ex(name, comment); // мб лучше потом добавлять коммент
     
     std::cout << "\nВведите количество подходов (от 1 до 100):\n> ";
     int n_sets = check(1, 100);
 
-    std::vector<Set> sets;
-
     for (int i = 0; i < n_sets; ++i) {
-        Set set;
-
-        std::cout << "\n" << i + 1 << " подход: введите вес (кг) (от 0 до 100) \n> ";
-        int weight = check(0, 100);
-        set.weight = weight;
-
-        std::cout << "\n" << i + 1 << " подход: введите кол-во повторов (от 1 до 100) \n> ";
-        int reps = check(1, 100);
-        set.reps = reps;
-
-        sets.push_back(set);
+        std::cout << "\n" << i + 1 << " подход:";
+        ex.addSet(promptSet());
     }
-    ex.sets = sets;
-
-    std::string comment;
-    std::cout << "\nКомментарий к упражнению:\n> ";
-    std::getline(std::cin, ex.comment);
 
     return ex;
 }
 
-Workout addWorkout() {
-    Workout w;
+Workout promptWorkout() {
     std::cout << "\n================================\n";
     std::cout << "НОВАЯ ТРЕНИРОВКА\n";
 
     std::string date;
     std::cout << "\nВведите дату тренировки (DD.MM.YYYY):\n> "; //формат
-    std::getline(std::cin, w.date);
+    std::getline(std::cin, date);
 
     std::string type;
     std::cout << "\nВведите тип тренировки:\n> "; // выберите
-    std::getline(std::cin, w.type);
+    std::getline(std::cin, type);
 
-    std::vector<Exercise> exercises;
+    std::string comment;
+    std::cout << "\nКомментарий к тренировке:\n> ";
+    std::getline(std::cin, comment);
+
+    Workout w(date, type, comment);
 
     std::cout << "\nДобавления упражнений в этой тренировке:\n"; 
 
     while (true) {
-        Exercise ex = addExersise();
-        exercises.push_back(ex);
-
+        w.addExersice(promptExercise());
         std::cout << "\nДобавить ещё одно упражнение? 1 - да, 0 - нет:\n> ";
         int choice2 = check(0, 1);
 
@@ -129,18 +191,13 @@ Workout addWorkout() {
             break;
         }
     }
-    w.exercises = exercises;
-
-    std::string comment;
-    std::cout << "\nКомментарий к тренировке:\n> ";
-    std::getline(std::cin, w.comment);
 
     return w;
 }
 
 int main() {
 
-    std::vector<Workout> workouts;
+    WorkoutManager manager;
 
     showMenu();
 
@@ -149,37 +206,34 @@ int main() {
     while (choice != 5) {
         switch (choice) {
         case 1: { // create workout
-            Workout w = addWorkout();
-            workouts.push_back(w);
+            manager.addWorkout(promptWorkout());
             std::cout << "\nТренировка записана!\n";
             break;
         } 
             
         case 2: { // посмотреть список тренировок
 
-            if (!workouts.empty()) {
-                showWorkouts(workouts);
+            if (manager.getCount() != 0) {
+                showWorkouts(manager);
             } else {
                 std::cout << "\nПока тренировок нет.\n";
             }
-            
             break;
         } 
 
         case 3: { // открыть конуретную тренировку
-
-            if (!workouts.empty()) {
-                showWorkouts(workouts);
+            if (manager.getCount() != 0) {
+                showWorkouts(manager);
 
                 std::cout << "\nВведите номер тренировки для просмотра:\n> ";
-                int ind = check(1, workouts.size());
-
-                std::cout << workouts[ind - 1].date << " | " << workouts[ind - 1].type << '\n';
+                int ind = check(1, manager.getCount());
+                Workout w = manager.getWorkouts()[ind - 1];
+                std::cout << w.getDate() << " | " << w.getType() << '\n';
                 std::cout << "Упражнения в этой тренировке:\n";
                 std::cout << "Название     |  Комментарий:\n";
-                for (Exercise ex: workouts[ind - 1].exercises) {
-                    std::cout << ex.name << " | " << ex.comment << '\n';
-                    for (Set s: ex.sets) {
+                for (Exercise ex: w.getExersices()) {
+                    std::cout << ex.getName() << " | " << ex.getComm() << '\n';
+                    for (Set s: ex.getSets()) {
                         std::cout << "Вес: " << s.weight << " кг, Повторов: " << s.reps << '\n';
                     }
                 }    
@@ -191,12 +245,11 @@ int main() {
         } 
 
         case 4: { // удалить тренировку
-            if (!workouts.empty()) {
-                showWorkouts(workouts);
+            if (manager.getCount() != 0) {
+                showWorkouts(manager);
                 std::cout << "\nВведите номер тренировки для удаления:\n> ";
-                int ind = check(1, workouts.size());
-
-                workouts.erase(workouts.begin() + ind - 1);
+                int ind = check(1, manager.getCount());
+                manager.deleteWorkout(ind - 1);
                 std::cout << "\nТренировка удалена!\n";
                 
             } else {
